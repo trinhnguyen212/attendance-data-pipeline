@@ -1,15 +1,17 @@
 import pandas as pd
 import logging
 from typing import Optional, Any
-from sqlalchemy import create_engine, text
+from sqlalchemy import text
 from config import get_connection_string, SOURCE_DB, STAGING_DB, EXTRACT_TABLES
+from exceptions import ExtractionError
+from db_manager import DatabaseManager
 
 logger = logging.getLogger(__name__)
 
 class IncrementalExtractor:
     def __init__(self) -> None:
-        self.source_engine = create_engine(get_connection_string(SOURCE_DB))
-        self.staging_engine = create_engine(get_connection_string(STAGING_DB))
+        self.source_engine = DatabaseManager.get_engine(SOURCE_DB)
+        self.staging_engine = DatabaseManager.get_engine(STAGING_DB)
 
     def _get_high_water_mark(self, table_name: str) -> Optional[Any]:
         """Fetch the latest created_at timestamp from the staging table."""
@@ -56,10 +58,14 @@ class IncrementalExtractor:
 
     def run(self) -> None:
         """Orchestrate the extraction of all key tables."""
-        total_rows = 0
-        for table in EXTRACT_TABLES:
-            total_rows += self.extract_table(table)
-        logger.info(f"Extraction complete. Total rows extracted: {total_rows}")
+        try:
+            total_rows = 0
+            for table in EXTRACT_TABLES:
+                total_rows += self.extract_table(table)
+            logger.info(f"Extraction complete. Total rows extracted: {total_rows}")
+        except Exception as e:
+            logger.error(f"Extraction phase failed: {e}")
+            raise ExtractionError(f"Failed to extract data from source: {e}") from e
 
 if __name__ == "__main__":
     extractor = IncrementalExtractor()

@@ -3,6 +3,7 @@ import logging
 from extractor import IncrementalExtractor
 from transformer import DataCleaner
 from loader import WarehouseLoader
+from exceptions import PipelineError, ExtractionError, TransformationError, LoadingError
 
 logger = logging.getLogger(__name__)
 
@@ -29,8 +30,16 @@ def run_pipeline() -> None:
         logger.info("-" * 40)
         logger.info("Pipeline completed successfully!")
 
+    except ExtractionError as e:
+        logger.critical(f"CRITICAL ERROR during Extraction: {e}")
+    except TransformationError as e:
+        logger.critical(f"CRITICAL ERROR during Transformation: {e}")
+    except LoadingError as e:
+        logger.critical(f"CRITICAL ERROR during Loading: {e}")
+    except PipelineError as e:
+        logger.critical(f"General Pipeline Error: {e}")
     except Exception as e:
-        logger.error("Pipeline failed!")
+        logger.error("Unexpected system failure!")
         logger.error(f"Error: {e}", exc_info=True)
 
 if __name__ == "__main__":

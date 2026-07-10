@@ -1,13 +1,15 @@
 import pandas as pd
 import logging
-from sqlalchemy import create_engine
+from typing import Dict
 from config import get_connection_string, STAGING_DB
+from exceptions import TransformationError
+from db_manager import DatabaseManager
 
 logger = logging.getLogger(__name__)
 
 class DataCleaner:
     def __init__(self) -> None:
-        self.staging_engine = create_engine(get_connection_string(STAGING_DB))
+        self.staging_engine = DatabaseManager.get_engine(STAGING_DB)
 
     def extract_from_staging(self, table_name: str) -> pd.DataFrame:
         """Load raw data from STAGING_DB into a Pandas DataFrame."""
@@ -36,9 +38,10 @@ class DataCleaner:
     def clean_users(self, df: pd.DataFrame) -> pd.DataFrame:
         """Basic cleaning for user data."""
         logger.info("Cleaning user data...")
-        # Trim whitespace from string columns using a more robust mapping
-        for col in df.columns:
-            df[col] = df[col].map(lambda x: x.strip() if isinstance(x, str) else x)
+        # Trim whitespace from string columns using vectorized .str.strip()
+        # We apply it only to columns that are of object/string type to avoid errors
+        for col in df.select_dtypes(include=['object']).columns:
+            df[col] = df[col].str.strip()
 
         # Handle nulls in non-critical columns (example)
         if 'phone_number' in df.columns:
@@ -49,24 +52,28 @@ class DataCleaner:
 
     def run(self) -> Dict[str, pd.DataFrame]:
         """Process the staging tables and return cleaned DataFrames."""
-        # Extract
-        raw_users = self.extract_from_staging("users")
-        raw_attendance = self.extract_from_staging("attendance_results")
+        try:
+            # Extract
+            raw_users = self.extract_from_staging("users")
+            raw_attendance = self.extract_from_staging("attendance_results")
 
-        # Transform
-        clean_users = self.clean_users(raw_users)
-        clean_attendance = self.clean_attendance(raw_attendance)
+            # Transform
+            clean_users = self.clean_users(raw_users)
+            clean_attendance = self.clean_attendance(raw_attendance)
 
-        # Integrity Check: Ensure all user_ids in attendance exist in users table
-        valid_user_ids = set(clean_users['id'])
-        clean_attendance = clean_attendance[clean_attendance['user_id'].isin(valid_user_ids)]
+            # Integrity Check: Ensure all user_ids in attendance exist in users table
+            valid_user_ids = set(clean_users['id'])
+            clean_attendance = clean_attendance[clean_attendance['user_id'].isin(valid_user_ids)]
 
-        logger.info(f"Integrity check complete. {len(clean_attendance)} attendance records verified against users.")
+            logger.info(f"Integrity check complete. {len(clean_attendance)} attendance records verified against users.")
 
-        return {
-            "users": clean_users,
-            "attendance_results": clean_attendance
-        }
+            return {
+                "users": clean_users,
+                "attendance_results": clean_attendance
+            }
+        except Exception as e:
+            logger.error(f"Transformation phase failed: {e}")
+            raise TransformationError(f"Failed to clean and validate data: {e}") from e
 
 if __name__ == "__main__":
     cleaner = DataCleaner()

@@ -1,14 +1,16 @@
 import pandas as pd
 import logging
 from typing import Dict
-from sqlalchemy import create_engine, text
+from sqlalchemy import text
 from config import get_connection_string, WAREHOUSE_DB, SOURCE_DB, DIMENSION_TABLES, FACT_TABLES
+from exceptions import LoadingError
+from db_manager import DatabaseManager
 
 logger = logging.getLogger(__name__)
 
 class WarehouseLoader:
     def __init__(self) -> None:
-        self.warehouse_engine = create_engine(get_connection_string(WAREHOUSE_DB))
+        self.warehouse_engine = DatabaseManager.get_engine(WAREHOUSE_DB)
 
     def load_table(self, table_name: str, df: pd.DataFrame, replace_data: bool = False) -> None:
         """Loads a Pandas DataFrame into the WAREHOUSE_DB."""
@@ -30,15 +32,19 @@ class WarehouseLoader:
 
     def run(self, cleaned_data: Dict[str, pd.DataFrame]) -> None:
         """Load all cleaned DataFrames into the warehouse."""
-        # Dimension tables: Replace data (Full refresh)
-        for table in DIMENSION_TABLES:
-            self.load_table(table, cleaned_data[table], replace_data=True)
+        try:
+            # Dimension tables: Replace data (Full refresh)
+            for table in DIMENSION_TABLES:
+                self.load_table(table, cleaned_data[table], replace_data=True)
 
-        # Fact tables: Append (Maintaining history)
-        for table in FACT_TABLES:
-            self.load_table(table, cleaned_data[table], replace_data=False)
+            # Fact tables: Append (Maintaining history)
+            for table in FACT_TABLES:
+                self.load_table(table, cleaned_data[table], replace_data=False)
 
-        logger.info("Warehouse loading complete.")
+            logger.info("Warehouse loading complete.")
+        except Exception as e:
+            logger.error(f"Loading phase failed: {e}")
+            raise LoadingError(f"Failed to load cleaned data into warehouse: {e}") from e
 
 if __name__ == "__main__":
     print("Loader requires data from the transformer. Run main.py instead.")
