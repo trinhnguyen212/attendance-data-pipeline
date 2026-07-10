@@ -1,19 +1,22 @@
 import pandas as pd
+import logging
 from sqlalchemy import create_engine
 from config import get_connection_string, STAGING_DB
 
+logger = logging.getLogger(__name__)
+
 class DataCleaner:
-    def __init__(self):
+    def __init__(self) -> None:
         self.staging_engine = create_engine(get_connection_string(STAGING_DB))
 
-    def extract_from_staging(self, table_name):
+    def extract_from_staging(self, table_name: str) -> pd.DataFrame:
         """Load raw data from STAGING_DB into a Pandas DataFrame."""
         query = f"SELECT * FROM {table_name}"
         return pd.read_sql(query, self.staging_engine)
 
-    def clean_attendance(self, df):
+    def clean_attendance(self, df: pd.DataFrame) -> pd.DataFrame:
         """Apply cleaning, validation and deduplication to attendance data."""
-        print("Cleaning attendance data...")
+        logger.info("Cleaning attendance data...")
         initial_count = len(df)
 
         # 1. Validation: ensure attendance_status is binary (0 or 1)
@@ -27,12 +30,12 @@ class DataCleaner:
         df = df.drop_duplicates(subset=['user_id', 'attendance_id'], keep='first')
 
         final_count = len(df)
-        print(f"Cleaned attendance data: {initial_count} -> {final_count} rows (Removed {initial_count - final_count} invalid/duplicates).")
+        logger.info(f"Cleaned attendance data: {initial_count} -> {final_count} rows (Removed {initial_count - final_count} invalid/duplicates).")
         return df
 
-    def clean_users(self, df):
+    def clean_users(self, df: pd.DataFrame) -> pd.DataFrame:
         """Basic cleaning for user data."""
-        print("Cleaning user data...")
+        logger.info("Cleaning user data...")
         # Trim whitespace from string columns using a more robust mapping
         for col in df.columns:
             df[col] = df[col].map(lambda x: x.strip() if isinstance(x, str) else x)
@@ -44,7 +47,7 @@ class DataCleaner:
 
 
 
-    def run(self):
+    def run(self) -> Dict[str, pd.DataFrame]:
         """Process the staging tables and return cleaned DataFrames."""
         # Extract
         raw_users = self.extract_from_staging("users")
@@ -58,7 +61,7 @@ class DataCleaner:
         valid_user_ids = set(clean_users['id'])
         clean_attendance = clean_attendance[clean_attendance['user_id'].isin(valid_user_ids)]
 
-        print(f"Integrity check complete. {len(clean_attendance)} attendance records verified against users.")
+        logger.info(f"Integrity check complete. {len(clean_attendance)} attendance records verified against users.")
 
         return {
             "users": clean_users,

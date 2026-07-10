@@ -1,14 +1,18 @@
 import pandas as pd
+import logging
+from typing import Dict
 from sqlalchemy import create_engine, text
-from config import get_connection_string, WAREHOUSE_DB, SOURCE_DB
+from config import get_connection_string, WAREHOUSE_DB, SOURCE_DB, DIMENSION_TABLES, FACT_TABLES
+
+logger = logging.getLogger(__name__)
 
 class WarehouseLoader:
-    def __init__(self):
+    def __init__(self) -> None:
         self.warehouse_engine = create_engine(get_connection_string(WAREHOUSE_DB))
 
-    def load_table(self, table_name, df, replace_data=False):
+    def load_table(self, table_name: str, df: pd.DataFrame, replace_data: bool = False) -> None:
         """Loads a Pandas DataFrame into the WAREHOUSE_DB."""
-        print(f"Loading {len(df)} rows into warehouse table {table_name}...")
+        logger.info(f"Loading {len(df)} rows into warehouse table {table_name}...")
 
         with self.warehouse_engine.connect() as conn:
             # 1. Ensure table exists with correct schema (including PKs)
@@ -22,17 +26,19 @@ class WarehouseLoader:
 
         # 3. Load data using append (since table now exists with correct PK)
         df.to_sql(table_name, self.warehouse_engine, if_exists='append', index=False)
-        print(f"Successfully loaded {table_name}.")
+        logger.info(f"Successfully loaded {table_name}.")
 
-    def run(self, cleaned_data):
+    def run(self, cleaned_data: Dict[str, pd.DataFrame]) -> None:
         """Load all cleaned DataFrames into the warehouse."""
         # Dimension tables: Replace data (Full refresh)
-        self.load_table("users", cleaned_data["users"], replace_data=True)
+        for table in DIMENSION_TABLES:
+            self.load_table(table, cleaned_data[table], replace_data=True)
 
         # Fact tables: Append (Maintaining history)
-        self.load_table("attendance_results", cleaned_data["attendance_results"], replace_data=False)
+        for table in FACT_TABLES:
+            self.load_table(table, cleaned_data[table], replace_data=False)
 
-        print("Warehouse loading complete.")
+        logger.info("Warehouse loading complete.")
 
 if __name__ == "__main__":
     print("Loader requires data from the transformer. Run main.py instead.")
