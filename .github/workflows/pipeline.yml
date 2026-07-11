@@ -1,0 +1,68 @@
+name: Pipeline CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root_password
+          MYSQL_DATABASE: source_db
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Initialize Databases
+        run: |
+          # Create the 3 required databases in the MySQL service
+          mysql -h 127.0.0.1 -u root -proot_password -e "CREATE DATABASE IF NOT EXISTS source_db; CREATE DATABASE IF NOT EXISTS staging_db; CREATE DATABASE IF NOT EXISTS warehouse_db;"
+
+      - name: Run Unit Tests (Edge-Case Matrix)
+        env:
+          DB_USER: root
+          DB_PASSWORD: root_password
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          SOURCE_DB: source_db
+          STAGING_DB: staging_db
+          WAREHOUSE_DB: warehouse_db
+          PYTHONPATH: .
+        run: pytest tests/test_transformer.py
+
+      - name: Run Regression Tests (Golden Dataset)
+        env:
+          DB_USER: root
+          DB_PASSWORD: root_password
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          SOURCE_DB: source_db
+          STAGING_DB: staging_db
+          WAREHOUSE_DB: warehouse_db
+          PYTHONPATH: .
+        run: pytest tests/test_golden.py

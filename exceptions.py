@@ -13,3 +13,7 @@ class TransformationError(PipelineError):
 class LoadingError(PipelineError):
     """Raised when loading phase fails"""
     pass
+
+class DataQualityError(PipelineError):
+    """Raised when data quality fails the defined thresholds"""
+    pass

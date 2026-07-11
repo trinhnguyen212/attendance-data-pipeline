@@ -10,6 +10,7 @@ logger = logging.getLogger(__name__)
 class DataCleaner:
     def __init__(self) -> None:
         self.staging_engine = DatabaseManager.get_engine(STAGING_DB)
+        self.dq_gate = DataQualityGate()
 
     def extract_from_staging(self, table_name: str) -> pd.DataFrame:
         """Load raw data from STAGING_DB into a Pandas DataFrame."""
@@ -60,6 +61,10 @@ class DataCleaner:
             # Extract
             raw_users = self.extract_from_staging("users")
             raw_attendance = self.extract_from_staging("attendance_results")
+
+            # Data Quality Gate: Validate raw data before transformation
+            self.dq_gate.validate(raw_users, "users")
+            self.dq_gate.validate(raw_attendance, "attendance_results")
 
             # Transform
             clean_users = self.clean_users(raw_users)
