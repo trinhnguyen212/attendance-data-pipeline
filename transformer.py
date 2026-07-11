@@ -38,14 +38,18 @@ class DataCleaner:
     def clean_users(self, df: pd.DataFrame) -> pd.DataFrame:
         """Basic cleaning for user data."""
         logger.info("Cleaning user data...")
-        # Trim whitespace from string columns using vectorized .str.strip()
-        # We apply it only to columns that are of object/string type to avoid errors
+        # Trim whitespace from string columns
         for col in df.select_dtypes(include=['object']).columns:
-            df[col] = df[col].str.strip()
+            # Use apply with a lambda for maximum compatibility across pandas versions
+            # This handles NaNs and mixed types more robustly than .str.strip()
+            df[col] = df[col].apply(lambda x: x.strip() if isinstance(x, str) else x)
 
         # Handle nulls in non-critical columns (example)
+        # Note: For unique columns like phone_number, we keep them as NaN/None
+        # because filling with 'Unknown' would trigger a UNIQUE constraint violation.
         if 'phone_number' in df.columns:
-            df['phone_number'] = df['phone_number'].fillna('Unknown')
+            # Removed the .fillna('Unknown') to avoid duplicate entry errors in the database
+            pass
         return df
 
 
