@@ -4,6 +4,7 @@ from typing import Dict
 from config import get_connection_string, STAGING_DB
 from exceptions import TransformationError
 from db_manager import DatabaseManager
+from quality_checks import DataQualityGate
 
 logger = logging.getLogger(__name__)
 
