@@ -71,6 +71,10 @@ def test_golden_dataset_regression():
     expected_users = pd.read_csv("tests/golden/expected_users.csv")
     expected_att = pd.read_csv("tests/golden/expected_attendance.csv")
 
+    # Ensure created_at is converted to datetime for comparison
+    actual_att['created_at'] = pd.to_datetime(actual_att['created_at'])
+    expected_att['created_at'] = pd.to_datetime(expected_att['created_at'])
+
     # Ensure column types match for comparison (especially for nulls/NaNs)
     pd.testing.assert_frame_equal(actual_users.sort_values('id').reset_index(drop=True),
                                   expected_users.sort_values('id').reset_index(drop=True),
