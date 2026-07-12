@@ -18,7 +18,7 @@ def test_golden_dataset_regression():
     staging_engine = create_engine(get_connection_string(STAGING_DB))
 
     # 1. Setup: Load Golden Input
-    users_df = pd.read_csv("tests/golden/input_users.csv")
+    users_df = pd.read_csv("data/golden/input_users.csv")
 
     # Align simplified golden schema with production schema
     # Production columns: id, shortcode, first_name, last_name, email, password, role_id, gender, address, birth_date
@@ -55,7 +55,7 @@ def test_golden_dataset_regression():
 
     users_df.to_sql("users", source_engine, if_exists="append", index=False)
 
-    att_df = pd.read_csv("tests/golden/input_attendance.csv")
+    att_df = pd.read_csv("data/golden/input_attendance.csv")
     # Tables already dropped/created in the previous block
     att_df.to_sql("attendance_results", source_engine, if_exists="append", index=False)
 
@@ -68,8 +68,8 @@ def test_golden_dataset_regression():
         actual_users = pd.read_sql("SELECT id, TRIM(CONCAT(first_name, ' ', last_name)) as name, email FROM users", conn)
         actual_att = pd.read_sql("SELECT user_id, attendance_id, attendance_status, created_at FROM attendance_results", conn)
 
-    expected_users = pd.read_csv("tests/golden/expected_users.csv")
-    expected_att = pd.read_csv("tests/golden/expected_attendance.csv")
+    expected_users = pd.read_csv("data/golden/expected_users.csv")
+    expected_att = pd.read_csv("data/golden/expected_attendance.csv")
 
     # Ensure created_at is converted to datetime for comparison
     actual_att['created_at'] = pd.to_datetime(actual_att['created_at'])

@@ -3,7 +3,7 @@ import pandas as pd
 from sqlalchemy import create_engine, text
 from config import get_connection_string, SOURCE_DB, STAGING_DB, WAREHOUSE_DB
 from main import run_pipeline
-import seed_data
+from scripts import seed_data
 
 def test_end_to_end_pipeline():
     """
