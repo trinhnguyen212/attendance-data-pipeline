@@ -88,7 +88,7 @@ def test_clean_attendance_deduplication_extreme(cleaner):
 
 def test_transformer_run_ghost_users(cleaner):
     # Case: The Ghost (User exists in attendance but NOT in users table)
-    users_df = pd.DataFrame({'id': [1], 'name': ['Alice']})
+    users_df = pd.DataFrame({'id': [1], 'name': ['Alice'], 'email': ['alice@example.com']})
     attendance_df = pd.DataFrame({
         'user_id': [1, 999], # 999 is a ghost user
         'attendance_id': [101, 102],

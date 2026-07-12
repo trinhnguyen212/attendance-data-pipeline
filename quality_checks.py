@@ -1,11 +1,8 @@
 import pandas as pd
 import logging
+from exceptions import DataQualityError
 
 logger = logging.getLogger(__name__)
-
-class DataQualityError(Exception):
-    """Raised when data quality fails the defined thresholds"""
-    pass
 
 class DataQualityGate:
     def __init__(self, threshold: float = 0.1):
@@ -35,6 +32,9 @@ class DataQualityGate:
         # Calculate null percentage
         null_count = 0
         for col in cols:
+            if col not in df.columns:
+                logger.error(f"Quality Gate: Critical column '{col}' missing from {table_name}")
+                raise DataQualityError(f"Critical column '{col}' missing from {table_name}")
             null_count += df[col].isna().sum()
 
         null_pct = null_count / (len(df) * len(cols)) if len(cols) > 0 else 0

@@ -10,7 +10,15 @@ def seed_data():
         engine = create_engine(connection_string)
 
         with engine.connect() as conn:
-            # 1. Clear existing data first to avoid duplicate key errors
+            # 1. Ensure tables exist with production schema
+            print("Initializing source tables...")
+            conn.execute(text("DROP TABLE IF EXISTS attendance_results"))
+            conn.execute(text("DROP TABLE IF EXISTS users"))
+            conn.execute(text("CREATE TABLE users (id BIGINT AUTO_INCREMENT PRIMARY KEY, shortcode VARCHAR(10) NULL, first_name VARCHAR(50) NULL, last_name VARCHAR(50) NULL, email VARCHAR(100) NULL, password VARCHAR(255) NULL, role_id INT NULL, gender VARCHAR(10) NULL, address TEXT NULL, birth_date DATE NULL)"))
+            conn.execute(text("CREATE TABLE attendance_results (row_id BIGINT AUTO_INCREMENT PRIMARY KEY, attendance_id BIGINT NULL, user_id BIGINT NULL, attendance_status INT NULL, created_at DATETIME NULL)"))
+            conn.commit()
+
+            # Clear existing data (though DROP already did this)
             print("Cleaning source tables...")
             conn.execute(text("TRUNCATE TABLE attendance_results"))
             conn.execute(text("TRUNCATE TABLE users"))

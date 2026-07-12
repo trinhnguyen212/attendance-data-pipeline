@@ -21,6 +21,7 @@ DB_NAME = os.getenv("DB_NAME")
 SOURCE_DB = os.getenv("SOURCE_DB")
 STAGING_DB = os.getenv("STAGING_DB")
 WAREHOUSE_DB = os.getenv("WAREHOUSE_DB")
+DQ_THRESHOLD = float(os.getenv("DQ_THRESHOLD", "0.1"))
 
 # Table Configurations
 EXTRACT_TABLES = ["users", "attendance_results"]

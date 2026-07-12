@@ -24,12 +24,12 @@ def test_end_to_end_pipeline():
 
     with staging_engine.connect() as conn:
         for t in tables:
-            conn.execute(text(f"TRUNCATE TABLE {t}"))
+            conn.execute(text(f"DROP TABLE IF EXISTS {t}"))
             conn.commit()
 
     with warehouse_engine.connect() as conn:
         for t in tables:
-            conn.execute(text(f"TRUNCATE TABLE {t}"))
+            conn.execute(text(f"DROP TABLE IF EXISTS {t}"))
             conn.commit()
 
     # 2. Seed: Populate source with fresh test data

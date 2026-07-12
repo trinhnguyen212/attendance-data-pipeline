@@ -1,7 +1,8 @@
 import pytest
 import pandas as pd
+import numpy as np
 from sqlalchemy import create_engine, text
-from config import get_connection_string, SOURCE_DB, WAREHOUSE_DB
+from config import get_connection_string, SOURCE_DB, STAGING_DB, WAREHOUSE_DB
 from main import run_pipeline
 import os
 
@@ -14,21 +15,57 @@ def test_golden_dataset_regression():
     """
     source_engine = create_engine(get_connection_string(SOURCE_DB))
     warehouse_engine = create_engine(get_connection_string(WAREHOUSE_DB))
+    staging_engine = create_engine(get_connection_string(STAGING_DB))
 
     # 1. Setup: Load Golden Input
-    # Use if_exists="replace" to ensure tables are created and cleared
     users_df = pd.read_csv("tests/golden/input_users.csv")
-    users_df.to_sql("users", source_engine, if_exists="replace", index=False)
+
+    # Align simplified golden schema with production schema
+    # Production columns: id, shortcode, first_name, last_name, email, password, role_id, gender, address, birth_date
+    if 'name' in users_df.columns:
+        users_df['first_name'] = users_df['name']
+        users_df['last_name'] = ''
+        users_df = users_df.drop(columns=['name'])
+
+    # Add other missing production columns as NaN
+    for col in ['shortcode', 'password', 'role_id', 'gender', 'address', 'birth_date']:
+        if col not in users_df.columns:
+            users_df[col] = np.nan
+
+    # Ensure columns are in a consistent order for the database
+    prod_cols = ['id', 'shortcode', 'first_name', 'last_name', 'email', 'password', 'role_id', 'gender', 'address', 'birth_date']
+    users_df = users_df[prod_cols]
+
+    with source_engine.connect() as conn:
+        conn.execute(text("DROP TABLE IF EXISTS users"))
+        conn.execute(text("DROP TABLE IF EXISTS attendance_results"))
+        conn.execute(text("CREATE TABLE users (id BIGINT PRIMARY KEY, shortcode VARCHAR(10) NULL, first_name VARCHAR(50) NULL, last_name VARCHAR(50) NULL, email VARCHAR(100) NULL, password VARCHAR(255) NULL, role_id INT NULL, gender VARCHAR(10) NULL, address TEXT NULL, birth_date DATE NULL)"))
+        conn.execute(text("CREATE TABLE attendance_results (row_id BIGINT AUTO_INCREMENT PRIMARY KEY, attendance_id BIGINT NULL, user_id BIGINT NULL, attendance_status INT NULL, created_at DATETIME NULL)"))
+        conn.commit()
+
+    with staging_engine.connect() as conn:
+        conn.execute(text("DROP TABLE IF EXISTS users"))
+        conn.execute(text("DROP TABLE IF EXISTS attendance_results"))
+        conn.commit()
+
+    with warehouse_engine.connect() as conn:
+        conn.execute(text("DROP TABLE IF EXISTS users"))
+        conn.execute(text("DROP TABLE IF EXISTS attendance_results"))
+        conn.commit()
+
+    users_df.to_sql("users", source_engine, if_exists="append", index=False)
 
     att_df = pd.read_csv("tests/golden/input_attendance.csv")
-    att_df.to_sql("attendance_results", source_engine, if_exists="replace", index=False)
+    # Tables already dropped/created in the previous block
+    att_df.to_sql("attendance_results", source_engine, if_exists="append", index=False)
 
     # 2. Execute pipeline
     run_pipeline()
 
     # 3. Verify: Compare Warehouse results to Expected output
     with warehouse_engine.connect() as conn:
-        actual_users = pd.read_sql("SELECT id, name, email FROM users", conn)
+        # Reconstruct the simplified 'name' column from first_name and last_name
+        actual_users = pd.read_sql("SELECT id, TRIM(CONCAT(first_name, ' ', last_name)) as name, email FROM users", conn)
         actual_att = pd.read_sql("SELECT user_id, attendance_id, attendance_status, created_at FROM attendance_results", conn)
 
     expected_users = pd.read_csv("tests/golden/expected_users.csv")
