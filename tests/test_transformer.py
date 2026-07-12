@@ -1,7 +1,7 @@
 import pytest
 import pandas as pd
 import numpy as np
-from transformer import DataCleaner
+from pipeline.transformer import DataCleaner
 
 @pytest.fixture
 def cleaner():

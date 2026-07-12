@@ -1,6 +1,6 @@
 import pandas as pd
 import logging
-from exceptions import DataQualityError
+from pipeline.exceptions import DataQualityError
 
 logger = logging.getLogger(__name__)
 

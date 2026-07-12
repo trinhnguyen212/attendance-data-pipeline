@@ -3,7 +3,7 @@ import logging
 from typing import Dict
 from sqlalchemy import text
 from config import get_connection_string, WAREHOUSE_DB, SOURCE_DB, DIMENSION_TABLES, FACT_TABLES
-from exceptions import LoadingError
+from pipeline.exceptions import LoadingError
 from db_manager import DatabaseManager
 
 logger = logging.getLogger(__name__)

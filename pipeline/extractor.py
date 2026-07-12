@@ -3,7 +3,7 @@ import logging
 from typing import Optional, Any
 from sqlalchemy import text
 from config import get_connection_string, SOURCE_DB, STAGING_DB, EXTRACT_TABLES
-from exceptions import ExtractionError
+from pipeline.exceptions import ExtractionError
 from db_manager import DatabaseManager
 
 logger = logging.getLogger(__name__)

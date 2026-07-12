@@ -1,9 +1,9 @@
 import sqlalchemy
 import logging
-from extractor import IncrementalExtractor
-from transformer import DataCleaner
-from loader import WarehouseLoader
-from exceptions import PipelineError, ExtractionError, TransformationError, LoadingError
+from pipeline.extractor import IncrementalExtractor
+from pipeline.transformer import DataCleaner
+from pipeline.loader import WarehouseLoader
+from pipeline.exceptions import PipelineError, ExtractionError, TransformationError, LoadingError
 
 logger = logging.getLogger(__name__)
 
