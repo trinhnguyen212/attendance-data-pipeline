@@ -3,3 +3,7 @@ sqlalchemy
 pymysql
 python-dotenv
 pytest
+pydantic
+pydantic-settings
+tenacity
+python-json-logger

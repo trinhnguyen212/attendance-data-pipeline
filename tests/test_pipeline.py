@@ -1,7 +1,7 @@
 import pytest
 import pandas as pd
 from sqlalchemy import create_engine, text
-from config import get_connection_string, SOURCE_DB, STAGING_DB, WAREHOUSE_DB
+from config import get_connection_string, settings
 from main import run_pipeline
 from scripts import seed_data
 
@@ -16,9 +16,9 @@ def test_end_to_end_pipeline():
     print("\nStarting End-to-End Integration Test...")
 
     # 1. Setup: Clear target tables
-    source_engine = create_engine(get_connection_string(SOURCE_DB))
-    staging_engine = create_engine(get_connection_string(STAGING_DB))
-    warehouse_engine = create_engine(get_connection_string(WAREHOUSE_DB))
+    source_engine = create_engine(get_connection_string(settings.SOURCE_DB))
+    staging_engine = create_engine(get_connection_string(settings.STAGING_DB))
+    warehouse_engine = create_engine(get_connection_string(settings.WAREHOUSE_DB))
 
     tables = ["users", "attendance_results"]
 

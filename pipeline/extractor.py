@@ -2,7 +2,7 @@ import pandas as pd
 import logging
 from typing import Optional, Any
 from sqlalchemy import text
-from config import get_connection_string, SOURCE_DB, STAGING_DB, EXTRACT_TABLES
+from config import get_connection_string, settings
 from pipeline.exceptions import ExtractionError
 from db_manager import DatabaseManager
 
@@ -10,8 +10,8 @@ logger = logging.getLogger(__name__)
 
 class IncrementalExtractor:
     def __init__(self) -> None:
-        self.source_engine = DatabaseManager.get_engine(SOURCE_DB)
-        self.staging_engine = DatabaseManager.get_engine(STAGING_DB)
+        self.source_engine = DatabaseManager.get_engine(settings.SOURCE_DB)
+        self.staging_engine = DatabaseManager.get_engine(settings.STAGING_DB)
 
     def _get_high_water_mark(self, table_name: str) -> Optional[Any]:
         """Fetch the latest created_at timestamp from the staging table."""
@@ -43,7 +43,7 @@ class IncrementalExtractor:
         # 2. Ensure staging table exists (copy structure from source)
         with self.staging_engine.connect() as conn:
             # Use SOURCE_DB since it's the definition of truth
-            conn.execute(text(f"CREATE TABLE IF NOT EXISTS {table_name} LIKE {SOURCE_DB}.{table_name}"))
+            conn.execute(text(f"CREATE TABLE IF NOT EXISTS {table_name} LIKE {settings.SOURCE_DB}.{table_name}"))
             conn.commit()
 
         if df.empty:
@@ -60,7 +60,7 @@ class IncrementalExtractor:
         """Orchestrate the extraction of all key tables."""
         try:
             total_rows = 0
-            for table in EXTRACT_TABLES:
+            for table in settings.EXTRACT_TABLES:
                 total_rows += self.extract_table(table)
             logger.info(f"Extraction complete. Total rows extracted: {total_rows}")
         except Exception as e:

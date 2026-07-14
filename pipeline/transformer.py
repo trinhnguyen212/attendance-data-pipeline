@@ -1,7 +1,7 @@
 import pandas as pd
 import logging
-from typing import Dict
-from config import get_connection_string, STAGING_DB
+from typing import Dict, Optional
+from config import get_connection_string, settings
 from pipeline.exceptions import TransformationError
 from db_manager import DatabaseManager
 from pipeline.quality_checks import DataQualityGate
@@ -9,9 +9,10 @@ from pipeline.quality_checks import DataQualityGate
 logger = logging.getLogger(__name__)
 
 class DataCleaner:
-    def __init__(self, dq_threshold: float = 0.1) -> None:
-        self.staging_engine = DatabaseManager.get_engine(STAGING_DB)
-        self.dq_gate = DataQualityGate(threshold=dq_threshold)
+    def __init__(self, dq_threshold: Optional[float] = None) -> None:
+        self.staging_engine = DatabaseManager.get_engine(settings.STAGING_DB)
+        threshold = dq_threshold if dq_threshold is not None else settings.DQ_THRESHOLD
+        self.dq_gate = DataQualityGate(threshold=threshold)
 
     def extract_from_staging(self, table_name: str) -> pd.DataFrame:
         """Load raw data from STAGING_DB into a Pandas DataFrame."""

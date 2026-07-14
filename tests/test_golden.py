@@ -2,7 +2,7 @@ import pytest
 import pandas as pd
 import numpy as np
 from sqlalchemy import create_engine, text
-from config import get_connection_string, SOURCE_DB, STAGING_DB, WAREHOUSE_DB
+from config import get_connection_string, settings
 from main import run_pipeline
 import os
 
@@ -13,9 +13,9 @@ def test_golden_dataset_regression():
     2. Run the pipeline.
     3. Compare Warehouse result with Golden Expected Output.
     """
-    source_engine = create_engine(get_connection_string(SOURCE_DB))
-    warehouse_engine = create_engine(get_connection_string(WAREHOUSE_DB))
-    staging_engine = create_engine(get_connection_string(STAGING_DB))
+    source_engine = create_engine(get_connection_string(settings.SOURCE_DB))
+    warehouse_engine = create_engine(get_connection_string(settings.WAREHOUSE_DB))
+    staging_engine = create_engine(get_connection_string(settings.STAGING_DB))
 
     # 1. Setup: Load Golden Input
     users_df = pd.read_csv("data/golden/input_users.csv")

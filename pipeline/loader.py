@@ -2,7 +2,7 @@ import pandas as pd
 import logging
 from typing import Dict
 from sqlalchemy import text
-from config import get_connection_string, WAREHOUSE_DB, SOURCE_DB, DIMENSION_TABLES, FACT_TABLES
+from config import get_connection_string, settings
 from pipeline.exceptions import LoadingError
 from db_manager import DatabaseManager
 
@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 class WarehouseLoader:
     def __init__(self) -> None:
-        self.warehouse_engine = DatabaseManager.get_engine(WAREHOUSE_DB)
+        self.warehouse_engine = DatabaseManager.get_engine(settings.WAREHOUSE_DB)
 
     def load_table(self, table_name: str, df: pd.DataFrame, replace_data: bool = False) -> None:
         """Loads a Pandas DataFrame into the WAREHOUSE_DB."""
@@ -18,7 +18,7 @@ class WarehouseLoader:
 
         with self.warehouse_engine.connect() as conn:
             # 1. Ensure table exists with correct schema (including PKs)
-            conn.execute(text(f"CREATE TABLE IF NOT EXISTS {table_name} LIKE {SOURCE_DB}.{table_name}"))
+            conn.execute(text(f"CREATE TABLE IF NOT EXISTS {table_name} LIKE {settings.SOURCE_DB}.{table_name}"))
 
             # 2. If replacing data, truncate the table first
             if replace_data:
@@ -34,11 +34,11 @@ class WarehouseLoader:
         """Load all cleaned DataFrames into the warehouse."""
         try:
             # Dimension tables: Replace data (Full refresh)
-            for table in DIMENSION_TABLES:
+            for table in settings.DIMENSION_TABLES:
                 self.load_table(table, cleaned_data[table], replace_data=True)
 
             # Fact tables: Append (Maintaining history)
-            for table in FACT_TABLES:
+            for table in settings.FACT_TABLES:
                 self.load_table(table, cleaned_data[table], replace_data=False)
 
             logger.info("Warehouse loading complete.")
