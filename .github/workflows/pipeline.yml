@@ -49,6 +49,7 @@ jobs:
           DB_PASSWORD: root_password
           DB_HOST: 127.0.0.1
           DB_PORT: 3306
+          DB_NAME: source_db
           SOURCE_DB: source_db
           STAGING_DB: staging_db
           WAREHOUSE_DB: warehouse_db
@@ -61,6 +62,7 @@ jobs:
           DB_PASSWORD: root_password
           DB_HOST: 127.0.0.1
           DB_PORT: 3306
+          DB_NAME: source_db
           SOURCE_DB: source_db
           STAGING_DB: staging_db
           WAREHOUSE_DB: warehouse_db
