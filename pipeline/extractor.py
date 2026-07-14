@@ -1,6 +1,6 @@
 import pandas as pd
 import logging
-from typing import Optional, Any
+from typing import Optional, Any, Dict
 from sqlalchemy import text
 from config import get_connection_string, settings
 from pipeline.exceptions import ExtractionError
@@ -56,13 +56,14 @@ class IncrementalExtractor:
         return len(df)
 
 
-    def run(self) -> None:
-        """Orchestrate the extraction of all key tables."""
+    def run(self) -> Dict[str, int]:
+        """Orchestrate the extraction of all key tables. Returns row counts per table."""
         try:
-            total_rows = 0
+            counts = {}
             for table in settings.EXTRACT_TABLES:
-                total_rows += self.extract_table(table)
-            logger.info(f"Extraction complete. Total rows extracted: {total_rows}")
+                counts[table] = self.extract_table(table)
+            logger.info(f"Extraction complete. Total rows extracted: {sum(counts.values())}")
+            return counts
         except Exception as e:
             logger.error(f"Extraction phase failed: {e}")
             raise ExtractionError(f"Failed to extract data from source: {e}") from e
