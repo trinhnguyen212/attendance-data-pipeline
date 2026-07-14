@@ -56,14 +56,12 @@ class IncrementalExtractor:
         return len(df)
 
 
-    def run(self) -> Dict[str, int]:
-        """Orchestrate the extraction of all key tables. Returns row counts per table."""
+    def run(self) -> None:
+        """Orchestrate the extraction of all key tables."""
         try:
-            counts = {}
             for table in settings.EXTRACT_TABLES:
-                counts[table] = self.extract_table(table)
-            logger.info(f"Extraction complete. Total rows extracted: {sum(counts.values())}")
-            return counts
+                self.extract_table(table)
+            logger.info("Extraction complete.")
         except Exception as e:
             logger.error(f"Extraction phase failed: {e}")
             raise ExtractionError(f"Failed to extract data from source: {e}") from e

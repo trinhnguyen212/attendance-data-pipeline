@@ -30,24 +30,20 @@ class WarehouseLoader:
         df.to_sql(table_name, self.warehouse_engine, if_exists='append', index=False)
         logger.info(f"Successfully loaded {table_name}.")
 
-    def run(self, cleaned_data: Dict[str, pd.DataFrame]) -> Dict[str, int]:
-        """Load all cleaned DataFrames into the warehouse. Returns rows loaded per table."""
+    def run(self, cleaned_data: Dict[str, pd.DataFrame]) -> None:
+        """Load all cleaned DataFrames into the warehouse."""
         try:
-            loaded_counts = {}
             # Dimension tables: Replace data (Full refresh)
             for table in settings.DIMENSION_TABLES:
                 df = cleaned_data[table]
                 self.load_table(table, df, replace_data=True)
-                loaded_counts[table] = len(df)
 
             # Fact tables: Append (Maintaining history)
             for table in settings.FACT_TABLES:
                 df = cleaned_data[table]
                 self.load_table(table, df, replace_data=False)
-                loaded_counts[table] = len(df)
 
             logger.info("Warehouse loading complete.")
-            return loaded_counts
         except Exception as e:
             logger.error(f"Loading phase failed: {e}")
             raise LoadingError(f"Failed to load cleaned data into warehouse: {e}") from e
