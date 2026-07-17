@@ -12,16 +12,20 @@ class IncrementalExtractor:
     def __init__(self) -> None:
         self.source_engine = DatabaseManager.get_engine(settings.SOURCE_DB)
         self.staging_engine = DatabaseManager.get_engine(settings.STAGING_DB)
+        self.warehouse_engine = DatabaseManager.get_engine(settings.WAREHOUSE_DB)
 
     def _get_high_water_mark(self, table_name: str) -> Optional[Any]:
-        """Fetch the latest created_at timestamp from the staging table."""
+        """
+        Fetch the latest created_at timestamp from the WAREHOUSE table.
+        The Warehouse is the source of truth for what has already been processed.
+        """
         try:
-            with self.staging_engine.connect() as conn:
+            with self.warehouse_engine.connect() as conn:
                 query = text(f"SELECT MAX(created_at) FROM {table_name}")
                 result = conn.execute(query).scalar()
                 return result
         except Exception:
-            # Table might not exist or be empty
+            # Table might not exist in warehouse yet or be empty
             return None
 
     def extract_table(self, table_name: str) -> int:
@@ -44,6 +48,11 @@ class IncrementalExtractor:
         with self.staging_engine.connect() as conn:
             # Use SOURCE_DB since it's the definition of truth
             conn.execute(text(f"CREATE TABLE IF NOT EXISTS {table_name} LIKE {settings.SOURCE_DB}.{table_name}"))
+
+            if hwm is None:
+                logger.info(f"Full extract: truncating staging table {table_name} before load...")
+                conn.execute(text(f"TRUNCATE TABLE {table_name}"))
+
             conn.commit()
 
         if df.empty:

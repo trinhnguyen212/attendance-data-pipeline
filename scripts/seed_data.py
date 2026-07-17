@@ -14,7 +14,7 @@ def seed_data():
             print("Initializing source tables...")
             conn.execute(text("DROP TABLE IF EXISTS attendance_results"))
             conn.execute(text("DROP TABLE IF EXISTS users"))
-            conn.execute(text("CREATE TABLE users (id BIGINT AUTO_INCREMENT PRIMARY KEY, shortcode VARCHAR(10) NULL, first_name VARCHAR(50) NULL, last_name VARCHAR(50) NULL, email VARCHAR(100) NULL, password VARCHAR(255) NULL, role_id INT NULL, gender VARCHAR(10) NULL, address TEXT NULL, birth_date DATE NULL)"))
+            conn.execute(text("CREATE TABLE users (id BIGINT AUTO_INCREMENT PRIMARY KEY, shortcode VARCHAR(10) NULL, first_name VARCHAR(50) NULL, last_name VARCHAR(50) NULL, email VARCHAR(100) NULL, password VARCHAR(255) NULL, role_id INT NULL, gender VARCHAR(10) NULL, address TEXT NULL, birth_date DATE NULL, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)"))
             conn.execute(text("CREATE TABLE attendance_results (row_id BIGINT AUTO_INCREMENT PRIMARY KEY, attendance_id BIGINT NULL, user_id BIGINT NULL, attendance_status INT NULL, created_at DATETIME NULL)"))
             conn.commit()
 

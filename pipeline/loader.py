@@ -14,6 +14,10 @@ class WarehouseLoader:
 
     def load_table(self, table_name: str, df: pd.DataFrame, replace_data: bool = False) -> None:
         """Loads a Pandas DataFrame into the WAREHOUSE_DB."""
+        if df.empty:
+            logger.info(f"No new records to load for table {table_name}. Skipping.")
+            return
+
         logger.info(f"Loading {len(df)} rows into warehouse table {table_name}...")
 
         with self.warehouse_engine.connect() as conn:
@@ -23,12 +27,33 @@ class WarehouseLoader:
             # 2. If replacing data, truncate the table first
             if replace_data:
                 conn.execute(text(f"TRUNCATE TABLE {table_name}"))
+                conn.commit()
+                # Load directly using to_sql for full refreshes
+                df.to_sql(table_name, self.warehouse_engine, if_exists='append', index=False)
+                return
 
+            # 3. Incremental Load: Use a temporary table to perform UPSERT (ON DUPLICATE KEY UPDATE)
+            # This prevents Duplicate Entry errors if the same record is extracted twice
+            # or if a record was updated in the source.
+            temp_table = f"temp_{table_name}"
+            df.to_sql(temp_table, self.warehouse_engine, if_exists='replace', index=False)
+
+            # Construct the UPSERT query
+            columns = df.columns.tolist()
+            col_list = ", ".join([f"`{c}`" for c in columns])
+            update_list = ", ".join([f"`{c}`=VALUES(`{c}`)" for c in columns])
+
+            upsert_query = text(f"""
+                INSERT INTO {table_name} ({col_list})
+                SELECT {col_list} FROM {temp_table}
+                ON DUPLICATE KEY UPDATE {update_list}
+            """)
+
+            conn.execute(upsert_query)
+            conn.execute(text(f"DROP TABLE {temp_table}"))
             conn.commit()
 
-        # 3. Load data using append (since table now exists with correct PK)
-        df.to_sql(table_name, self.warehouse_engine, if_exists='append', index=False)
-        logger.info(f"Successfully loaded {table_name}.")
+        logger.info(f"Successfully loaded {table_name} via UPSERT.")
 
     def run(self, cleaned_data: Dict[str, pd.DataFrame]) -> None:
         """Load all cleaned DataFrames into the warehouse."""
